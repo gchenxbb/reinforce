@@ -1,0 +1,4 @@
+#Wed Jun 05 19:08:50 CST 2019
+base.0=/Users/chenguang491/Desktop/ShellApk/app/build/intermediates/transforms/dexMerger/debug/25
+path.0=classes.dex
+renamed.0=classes.dex
