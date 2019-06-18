@@ -7,7 +7,7 @@ build release包，签名和alias在project目录下。
 5，运行ReinforcingTool工程，生成一个新class.dex文件。将该文件放入到app-debug.apk中，替换原来的classes.dex。
 这个新classes.dex文件，包含原App工程的release包apk。
 6，替换后的文件重命名app-debug-new.apk。
-7，对app-debug-new.apk文件进行重新签名，因ShellApk工程一直用的debug签名，因此使用.android目录下的debug.keystore签名。
+7，对app-debug-new.apk文件进行重新签名，因ShellApk工程一直用的debug签名，因此使用.android目录下的debug.keystore签名，也在外面目录。
 在D:\android\Sdk\build-tools\28.0.3目录下，将app-debug-new.apk文件和debug.keystore文件复制进去。
 签名命令
 apksigner sign  --ks debug.keystore  --ks-key-alias androiddebugkey  --ks-pass pass:android  --key-pass pass:android  --out app-debug-new-sign.apk  app-debug-new.apk
