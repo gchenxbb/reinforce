@@ -1,4 +1,4 @@
-待加密源apk文件
+源apk文件
 
 打包签名
 reinforce
