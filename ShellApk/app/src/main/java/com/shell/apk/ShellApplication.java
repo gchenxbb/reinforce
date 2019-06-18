@@ -46,7 +46,7 @@ public class ShellApplication extends Application {
             libPath = libs.getAbsolutePath();
 
             String location = this.getExternalCacheDir().getAbsolutePath();
-            apkFileName = location + "/app.apk";
+            apkFileName = location + "/app_source.apk";
 //            apkFileName = odex.getAbsolutePath() + "/app.apk";
             Log.d(TAG, "解密出来的apk存储位置：" + apkFileName);
             //目前待解决，用这个再打一个apk，提取dex，去windows上解压提取，去除shell.dex，传给java项目，
