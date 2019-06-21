@@ -2,7 +2,11 @@ package com.shell.apk;
 
 import android.app.Activity;
 import android.app.Application;
+import android.app.Instrumentation;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.util.ArrayMap;
 import android.util.Log;
 
@@ -15,6 +19,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -33,6 +40,64 @@ public class ShellApplication extends Application {
     public void onCreate() {
         super.onCreate();
         //路由到源apk的Application的onCreate方法中运行
+        String appClassName = null;
+        try {
+            ApplicationInfo applicationInfo = this.getPackageManager().getApplicationInfo(this.getPackageName(), PackageManager.GET_META_DATA);
+            Bundle bundle = applicationInfo.metaData;
+            if (bundle != null && bundle.containsKey("APPLICATION_CLASS_NAME")) {
+                appClassName = bundle.getString("APPLICATION_CLASS_NAME");
+            } else {
+                Log.d(TAG, "no application class name,");
+            }
+
+            Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
+            String packageName = this.getPackageName();
+            Object currentActivityThread = getField(activityThreadClass, null, "sCurrentActivityThread");
+
+            //AppBindData mBoundApplication;
+            Object mBoundApplication = getField(activityThreadClass, currentActivityThread, "mBoundApplication");
+            Class<?> appBindDataClass = Class.forName("android.app.ActivityThread$AppBindData");
+            //LoadedApk类型的info;
+            Object loadedApkInfo = getField(appBindDataClass, mBoundApplication, "info");
+            Class<?> loadedApkClass = Class.forName("android.app.LoadedApk");
+            //将LoadApk内部mApplication设置null
+            setField(loadedApkClass, loadedApkInfo, null, "mApplication");
+            //删除该Application
+            Object oldApplication = getField(activityThreadClass, currentActivityThread, "mInitialApplication");
+            ArrayList<Application> mAllApplication = (ArrayList<Application>) getField(activityThreadClass, currentActivityThread, "mAllApplications");
+            mAllApplication.remove(oldApplication);
+            //找到LoadedApk和AppBindData的info
+            ApplicationInfo aiLoadApk = (ApplicationInfo) getField(loadedApkClass, loadedApkInfo, "mApplicationInfo");
+            ApplicationInfo aiBindData = (ApplicationInfo) getField(appBindDataClass, mBoundApplication, "appInfo");
+            //向他们的className赋值要启动的类
+            aiLoadApk.className = appClassName;
+            aiBindData.className = appClassName;
+
+            //调用makeApplication方法
+            Method method = loadedApkClass.getDeclaredMethod("makeApplication", new Class[]{boolean.class, Instrumentation.class});
+            method.setAccessible(true);
+            Application app = (Application) method.invoke(loadedApkInfo, new Object[]{false, null});
+            setField(activityThreadClass, currentActivityThread, app, "mInitialApplication");
+            ArrayMap mProviderMap = (ArrayMap) getField(activityThreadClass, currentActivityThread, "mProviderMap");
+            Iterator it = mProviderMap.values().iterator();
+
+            //更新为新的app
+            Class providerClientRecordClass = Class.forName("android.app.ActivityThread$ProviderClientRecord");
+            Class contentProviderClass = Class.forName("android.content.ContentProvider");
+            while (it.hasNext()) {
+                Object providerClientRecord = it.next();
+                Object localProvider = getField(providerClientRecordClass, providerClientRecord, "mLocalProvider");
+                if(localProvider!=null){
+                    setField(contentProviderClass, localProvider, app, "mContext");
+                }
+            }
+            app.onCreate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.d(TAG, "no application class name," + e.getMessage());
+        }
+
     }
 
     @Override
